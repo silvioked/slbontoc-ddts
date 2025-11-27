@@ -1,0 +1,29 @@
+services:
+  # Laravel Web Service (Docker)
+  - type: web
+    name: lgu-document-tracking
+    env: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+
+  # PostgreSQL Database
+  - type: pgsql
+    name: lgu-document-db
+    plan: free
+    databaseName: lgu_document_tracking
+    user: lgu_admin
+
