@@ -15,45 +15,141 @@ class DepartmentSeeder extends Seeder
     {
         $departments = [
             [
-                'name' => "Mayor's Office",
-                'code' => 'MAYOR',
-                'description' => 'Main executive office of the Local Government Unit',
+                'name' => 'BAC (Bids and Awards Committee)',
+                'code' => 'BAC',
+                'description' => 'Bids and Awards Committee',
                 'is_active' => true,
             ],
             [
-                'name' => "Treasurer's Office",
-                'code' => 'TREAS',
-                'description' => 'Manages revenue collection and treasury operations',
+                'name' => 'BOMWASA',
+                'code' => 'BOMWASA',
+                'description' => 'BOMWASA',
                 'is_active' => true,
             ],
             [
-                'name' => 'Budget Office',
-                'code' => 'BUDGET',
-                'description' => 'Handles budget planning and financial management',
+                'name' => 'DILG',
+                'code' => 'DILG',
+                'description' => 'Department of the Interior and Local Government',
                 'is_active' => true,
             ],
             [
-                'name' => 'Engineering Office',
-                'code' => 'ENGR',
-                'description' => 'Oversees infrastructure and engineering projects',
+                'name' => 'GSO - Supply Office',
+                'code' => 'GSO',
+                'description' => 'General Services Office - Supply Office',
                 'is_active' => true,
             ],
             [
-                'name' => 'Planning and Development Office',
-                'code' => 'MPDO',
-                'description' => 'Municipal planning and development coordination',
+                'name' => 'HRMO (Human Resource Management Office)',
+                'code' => 'HRMO',
+                'description' => 'Human Resource Management Office',
                 'is_active' => true,
             ],
             [
-                'name' => 'Accounting Office',
+                'name' => 'IAS (Internal Audit Service)',
+                'code' => 'IAS',
+                'description' => 'Internal Audit Service',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MAGSO (Municipal Agricultural Services Office)',
+                'code' => 'MAGSO',
+                'description' => 'Municipal Agricultural Services Office',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MASSO (Office of the Municipal Assessor)',
+                'code' => 'MASSO',
+                'description' => 'Office of the Municipal Assessor',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MCR (Office of the Municipal Civil Registrar)',
+                'code' => 'MCR',
+                'description' => 'Office of the Municipal Civil Registrar',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MDRRMO (Municipal Disaster Risk Reduction and Management Office)',
+                'code' => 'MDRRMO',
+                'description' => 'Municipal Disaster Risk Reduction and Management Office',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MENRO (Municipal Environment and Natural Resources Office)',
+                'code' => 'MENRO',
+                'description' => 'Municipal Environment and Natural Resources Office',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MEO (Office of the Municipal Engineer)',
+                'code' => 'MEO',
+                'description' => 'Office of the Municipal Engineer',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MOTORPOOL',
+                'code' => 'MOTORPOOL',
+                'description' => 'Motorpool',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MPDC (Office of the Municipal Planning and Development Coordinator)',
+                'code' => 'MPDC',
+                'description' => 'Office of the Municipal Planning and Development Coordinator',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MSWDO (Municipal Social Welfare and Development Office)',
+                'code' => 'MSWDO',
+                'description' => 'Municipal Social Welfare and Development Office',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'MTO (Office of the Municipal Treasurer)',
+                'code' => 'MTO',
+                'description' => 'Office of the Municipal Treasurer',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Office of the Municipal Accountant',
                 'code' => 'ACCTG',
-                'description' => 'Manages accounting records and financial reports',
+                'description' => 'Office of the Municipal Accountant',
                 'is_active' => true,
             ],
             [
-                'name' => "Civil Registrar's Office",
-                'code' => 'CIVIL',
-                'description' => 'Handles civil registration and vital statistics',
+                'name' => 'Office of the Municipal Budget Officer',
+                'code' => 'BUDGET',
+                'description' => 'Office of the Municipal Budget Officer',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Office of the Municipal Mayor',
+                'code' => 'MAYOR',
+                'description' => 'Office of the Municipal Mayor',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'OSCA (Offices)',
+                'code' => 'OSCA',
+                'description' => 'OSCA Offices',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'RHU (Rural Health Unit)',
+                'code' => 'RHU',
+                'description' => 'Rural Health Unit',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'SB (Office of the Sangguniang Bayan)',
+                'code' => 'SB',
+                'description' => 'Office of the Sangguniang Bayan',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Tourism Office',
+                'code' => 'TOURISM',
+                'description' => 'Tourism Office',
                 'is_active' => true,
             ],
         ];
@@ -64,18 +160,6 @@ class DepartmentSeeder extends Seeder
                 ['code' => $department['code']],
                 $department
             );
-        }
-
-        // Fix any existing MPDO department that may have duplicate code in the name
-        $mpdo = Department::where('code', 'MPDO')->first();
-        if ($mpdo) {
-            // Remove any occurrence of (MPDO) from the name, including duplicates
-            $cleanedName = preg_replace('/\s*\(MPDO\)\s*/', '', $mpdo->name);
-            $cleanedName = trim($cleanedName);
-            if ($cleanedName !== $mpdo->name) {
-                $mpdo->update(['name' => $cleanedName]);
-                $this->command->info("Fixed MPDO department name: '{$cleanedName}'");
-            }
         }
 
         $this->command->info('Departments created/updated successfully!');

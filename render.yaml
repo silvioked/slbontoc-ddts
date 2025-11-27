@@ -1,0 +1,41 @@
+services:
+  # Laravel Web Service
+  - type: web
+    name: lgu-document-tracking
+    env: php
+    plan: free # Free tier for testing
+    region: oregon # Choose your preferred region
+    buildCommand: |
+      composer install --optimize-autoloader --no-dev
+      npm ci
+      npm run build
+      php artisan storage:link || true
+    startCommand: php artisan serve --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+    # Note: Persistent disk requires paid plan
+    # For free tier, files will be ephemeral (lost on restart)
+    # Consider using S3 for file storage on free tier
+    # disk:
+    #   name: storage-disk
+    #   mountPath: /opt/render/project/src/storage
+    #   sizeGB: 10
+
+  # PostgreSQL Database
+  - type: pgsql
+    name: lgu-document-db
+    plan: free # Free tier for testing (90-day retention)
+    databaseName: lgu_document_tracking
+    user: lgu_admin
+

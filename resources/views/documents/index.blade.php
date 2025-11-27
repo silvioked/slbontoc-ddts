@@ -6,11 +6,9 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold"><i class="bi bi-file-earmark-text"></i> Documents</h2>
-        @role('Administrator|Mayor|LGU Staff|Department Head')
         <a href="{{ route('documents.create') }}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Create New Document
         </a>
-        @endrole
     </div>
 
     <!-- Filters -->

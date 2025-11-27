@@ -45,7 +45,6 @@
                                     id="document_type" 
                                     name="document_type" 
                                     required>
-                                <option value="">Select Document Type</option>
                                 @foreach($documentTypes as $type)
                                 <option value="{{ $type }}" {{ old('document_type') == $type ? 'selected' : '' }}>
                                     {{ $type }}
@@ -55,18 +54,29 @@
                             @error('document_type')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <div id="custom_document_type_container" class="mt-2" style="display: none;">
+                                <label for="custom_document_type" class="form-label">Specify Document Type <span class="text-danger">*</span></label>
+                                <input type="text" 
+                                       class="form-control @error('custom_document_type') is-invalid @enderror" 
+                                       id="custom_document_type" 
+                                       name="custom_document_type" 
+                                       value="{{ old('custom_document_type') }}" 
+                                       placeholder="Enter custom document type">
+                                @error('custom_document_type')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="department_id" class="form-label">Assign to Department <span class="text-danger">*</span></label>
+                            <label for="department_id" class="form-label">Forwarded to Department <span class="text-danger">*</span></label>
                             <select class="form-select @error('department_id') is-invalid @enderror" 
                                     id="department_id" 
                                     name="department_id" 
                                     required>
-                                <option value="">Select Department</option>
                                 @foreach($departments as $department)
                                 <option value="{{ $department->id }}" {{ old('department_id') == $department->id ? 'selected' : '' }}>
-                                    {{ $department->display_name }}
+                                    {{ $department->name }}
                                 </option>
                                 @endforeach
                             </select>
@@ -139,5 +149,50 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentTypeSelect = document.getElementById('document_type');
+    const customDocumentTypeContainer = document.getElementById('custom_document_type_container');
+    const customDocumentTypeInput = document.getElementById('custom_document_type');
+    
+    function toggleCustomDocumentType() {
+        if (documentTypeSelect.value === 'Others') {
+            customDocumentTypeContainer.style.display = 'block';
+            customDocumentTypeInput.setAttribute('required', 'required');
+        } else {
+            customDocumentTypeContainer.style.display = 'none';
+            customDocumentTypeInput.removeAttribute('required');
+            customDocumentTypeInput.value = '';
+        }
+    }
+    
+    // Check on page load (for old values)
+    toggleCustomDocumentType();
+    
+    // Listen for changes
+    documentTypeSelect.addEventListener('change', toggleCustomDocumentType);
+    
+    // Handle form submission - set document_type to custom value if Others is selected
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (documentTypeSelect.value === 'Others') {
+            if (!customDocumentTypeInput.value.trim()) {
+                e.preventDefault();
+                customDocumentTypeInput.focus();
+                return false;
+            }
+            // Create a hidden input with the custom value as document_type
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'document_type';
+            hiddenInput.value = customDocumentTypeInput.value.trim();
+            form.appendChild(hiddenInput);
+            // Remove the original select from submission
+            documentTypeSelect.disabled = true;
+        }
+    });
+});
+</script>
 @endsection
 

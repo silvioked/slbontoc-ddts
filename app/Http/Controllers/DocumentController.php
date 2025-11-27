@@ -129,39 +129,42 @@ class DocumentController extends Controller
     }
 
     /**
-     * Show the form for creating a new document (Admin, Mayor, LGU Staff, Department Head)
+     * Show the form for creating a new document (All authenticated users)
      */
     public function create()
     {
-        // Administrators, Mayor, LGU Staff, and Department Heads can create documents
-        if (!Auth::user()->hasAnyRole(['Administrator', 'Mayor', 'LGU Staff', 'Department Head'])) {
-            abort(403, 'Only administrators, mayor, LGU staff, and department heads can create documents.');
-        }
-        
+        // All authenticated users can create documents
         $departments = Department::active()->get();
-        $documentTypes = ['Memorandum', 'Letter', 'Resolution', 'Ordinance', 'Report', 'Request', 'Other'];
+        $documentTypes = ['Certification', 'Disbursement Voucher', 'Leave Term', 'Obligation Request', 'Program of Work', 'SEF', 'Service Record', 'Others'];
         
         return view('documents.create', compact('departments', 'documentTypes'));
     }
 
     /**
-     * Store a newly created document in storage (Admin, Mayor, LGU Staff, Department Head)
+     * Store a newly created document in storage (All authenticated users)
      */
     public function store(Request $request)
     {
-        // Administrators, Mayor, LGU Staff, and Department Heads can create documents
-        if (!Auth::user()->hasAnyRole(['Administrator', 'Mayor', 'LGU Staff', 'Department Head'])) {
-            abort(403, 'Only administrators, mayor, LGU staff, and department heads can create documents.');
-        }
+        // All authenticated users can create documents
 
         // Validate input
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'document_type' => ['required', 'string'],
+            'custom_document_type' => ['nullable', 'string', 'max:255'],
             'department_id' => ['required', 'exists:departments,id'],
             'is_priority' => ['nullable', 'boolean'],
         ]);
+
+        // If document_type is "Others", use the custom_document_type value
+        if ($validated['document_type'] === 'Others') {
+            if (empty($validated['custom_document_type'])) {
+                return back()->withInput()
+                    ->withErrors(['custom_document_type' => 'Please specify the document type.']);
+            }
+            $validated['document_type'] = trim($validated['custom_document_type']);
+        }
 
         DB::beginTransaction();
         try {
@@ -266,7 +269,7 @@ class DocumentController extends Controller
         }
 
         $departments = Department::active()->get();
-        $documentTypes = ['Memorandum', 'Letter', 'Resolution', 'Ordinance', 'Report', 'Request', 'Other'];
+        $documentTypes = ['Certification', 'Disbursement Voucher', 'Leave Term', 'Obligation Request', 'Program of Work', 'SEF', 'Service Record', 'Others'];
         
         return view('documents.edit', compact('document', 'departments', 'documentTypes'));
     }
@@ -287,9 +290,19 @@ class DocumentController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'document_type' => ['required', 'string'],
+            'custom_document_type' => ['nullable', 'string', 'max:255'],
             'department_id' => ['required', 'exists:departments,id'],
             'forward_to_department' => ['nullable', 'exists:departments,id'],
         ]);
+
+        // If document_type is "Others", use the custom_document_type value
+        if ($validated['document_type'] === 'Others') {
+            if (empty($validated['custom_document_type'])) {
+                return back()->withInput()
+                    ->withErrors(['custom_document_type' => 'Please specify the document type.']);
+            }
+            $validated['document_type'] = trim($validated['custom_document_type']);
+        }
 
         DB::beginTransaction();
         try {

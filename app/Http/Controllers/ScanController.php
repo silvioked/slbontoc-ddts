@@ -8,6 +8,7 @@ use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ScanController extends Controller
 {
@@ -74,6 +75,42 @@ class ScanController extends Controller
             }
         }
 
+        $autoStatusUpdated = false;
+        if (
+            $user->can('update status') &&
+            in_array($document->status, ['Forwarded', 'Pending'])
+        ) {
+            DB::beginTransaction();
+            try {
+                $oldStatus = $document->status;
+                $document->update(['status' => 'Received']);
+
+                DocumentStatusLog::createLog(
+                    $document->id,
+                    $user->id,
+                    $oldStatus,
+                    'Received',
+                    'Automatically marked as Received via QR scan'
+                );
+
+                $this->notificationService->notifyStatusUpdate(
+                    $document,
+                    $document->created_by,
+                    'Received'
+                );
+
+                DB::commit();
+                $autoStatusUpdated = true;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Failed to auto-mark document as received via scan', [
+                    'document_id' => $document->id,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Document found successfully.',
@@ -90,6 +127,7 @@ class ScanController extends Controller
                 'created_at' => $document->created_at->format('M d, Y h:i A'),
             ],
             'redirect_url' => route('documents.show', $document),
+            'auto_status_updated' => $autoStatusUpdated,
         ]);
     }
 
