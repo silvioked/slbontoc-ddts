@@ -4,7 +4,7 @@ FROM php:8.2-cli
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies (removed GD dependencies since we use SVG for QR codes)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -16,55 +16,52 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 18.x directly from official binary
+# Install Node.js 18.x
 RUN curl -fsSL https://nodejs.org/dist/v18.20.0/node-v18.20.0-linux-x64.tar.xz -o /tmp/node.tar.xz \
     && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
-    && rm /tmp/node.tar.xz \
-    && node --version \
-    && npm --version
+    && rm /tmp/node.tar.xz
 
-# Install PHP extensions (GD removed since QR codes use SVG format)
-RUN docker-php-ext-install -j$(nproc) pdo_mysql
-RUN docker-php-ext-install -j$(nproc) pdo_pgsql
-RUN docker-php-ext-install -j$(nproc) mbstring
-RUN docker-php-ext-install -j$(nproc) exif
-RUN docker-php-ext-install -j$(nproc) pcntl
-RUN docker-php-ext-install -j$(nproc) bcmath
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy existing application directory contents
-COPY . /var/www/html
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Install NPM dependencies and build assets
-RUN npm ci && npm run build
+# Copy package files for npm
+COPY package.json package-lock.json ./
 
-# Create storage and cache directories with proper permissions
-RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+# Install NPM dependencies
+RUN npm ci
 
-# Create QR codes directory
-RUN mkdir -p public/qrcodes \
-    && chmod -R 775 public/qrcodes
+# Copy the rest of the application
+COPY . .
 
-# Copy .env.example to .env if .env doesn't exist (will be overridden by Render env vars)
+# Build frontend assets
+RUN npm run build
+
+# Create required directories
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache public/qrcodes \
+    && chmod -R 775 storage bootstrap/cache public/qrcodes
+
+# Copy .env.example if .env doesn't exist
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-# Expose port (Render sets PORT environment variable)
+# Expose port
 EXPOSE 10000
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
-# Cache Laravel configuration\n\
+set -e\n\
 php artisan config:cache || true\n\
 php artisan route:cache || true\n\
 php artisan view:cache || true\n\
 php artisan storage:link || true\n\
-# Start Laravel server on Render PORT\n\
 php artisan serve --host=0.0.0.0 --port=${PORT:-10000}' > /start.sh \
     && chmod +x /start.sh
 
