@@ -1,69 +1,63 @@
-# Use PHP 8.2
-FROM php:8.2-cli
+# ----------------------------------------------------
+# Stage 1: Composer Dependencies
+# ----------------------------------------------------
+FROM composer:2 AS build
 
-# Set working directory
-WORKDIR /var/www/html
+WORKDIR /app
 
-# Install system dependencies
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist
+
+COPY . .
+RUN composer dump-autoload --optimize
+
+# ----------------------------------------------------
+# Stage 2: Production Image
+# ----------------------------------------------------
+FROM php:8.2-fpm
+
+# Install system deps + Nginx + Supervisor + PostgreSQL driver
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    xz-utils \
+    nginx \
+    supervisor \
+    libpq-dev \
     libonig-dev \
     libxml2-dev \
-    libpq-dev \
-    zip \
+    git \
     unzip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    curl \
+    && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath
 
-# Install Node.js 18.x
-RUN curl -fsSL https://nodejs.org/dist/v18.20.0/node-v18.20.0-linux-x64.tar.xz -o /tmp/node.tar.xz \
-    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
-    && rm /tmp/node.tar.xz
+WORKDIR /var/www/html
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Copy composer files first for better caching
-COPY composer.json composer.lock ./
-
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-# Copy package files for npm
-COPY package.json package-lock.json ./
-
-# Install NPM dependencies
-RUN npm ci
-
-# Copy the rest of the application
+# Copy Laravel application
 COPY . .
 
-# Build frontend assets
-RUN npm run build
+# Copy vendor files from builder stage
+COPY --from=build /app/vendor ./vendor
 
-# Create required directories
-RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache public/qrcodes \
-    && chmod -R 775 storage bootstrap/cache public/qrcodes
+# Nginx config
+RUN rm -f /etc/nginx/sites-enabled/default
+COPY deploy/nginx.conf /etc/nginx/sites-enabled/default
 
-# Copy .env.example if .env doesn't exist
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
-
-# Expose port
-EXPOSE 10000
-
-# Create startup script
+# Create startup script to handle PORT dynamically
 RUN echo '#!/bin/bash\n\
-set -e\n\
-php artisan config:cache || true\n\
-php artisan route:cache || true\n\
-php artisan view:cache || true\n\
-php artisan storage:link || true\n\
-php artisan serve --host=0.0.0.0 --port=${PORT:-10000}' > /start.sh \
+# Replace PORT in nginx config\n\
+sed -i "s/listen 10000/listen $PORT/g" /etc/nginx/sites-enabled/default\n\
+# Start supervisor\n\
+/usr/bin/supervisord -n' > /start.sh \
     && chmod +x /start.sh
 
-# Start the application
+# Supervisor config to run both Nginx + PHP-FPM
+COPY deploy/supervisor.conf /etc/supervisor/conf.d/supervisor.conf
+
+# Create required directories
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache public/qrcodes
+
+# Laravel permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache public/qrcodes
+
+EXPOSE 10000
+
 CMD ["/start.sh"]
