@@ -4,7 +4,7 @@ FROM php:8.2-cli
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies and Node.js
+# Install system dependencies first
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -15,11 +15,17 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     zip \
     unzip \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js using NodeSource (separate step for better error handling)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && node --version \
+    && npm --version
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -31,7 +37,7 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install NPM dependencies and build assets
-RUN npm ci --production=false && npm run build
+RUN npm ci && npm run build
 
 # Create storage and cache directories with proper permissions
 RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
