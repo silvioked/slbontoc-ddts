@@ -35,8 +35,15 @@ RUN npm install
 # Build frontend assets (for production)
 RUN npm run build
 
+# Create required directories
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache public/qrcodes
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 775 storage bootstrap/cache public/qrcodes
+
 # Create storage symlink
-RUN php artisan storage:link
+RUN php artisan storage:link || true
 
 # Optimize Laravel
 RUN php artisan optimize
@@ -45,8 +52,8 @@ RUN php artisan optimize
 # Clear Route Cache
 RUN php artisan route:cache
 
-# Expose port
-EXPOSE 8000
+# Expose port (Render will map to $PORT dynamically)
+EXPOSE 10000
 
-# Start Laravel
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000
+# Start Laravel (uses $PORT environment variable from Render)
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
